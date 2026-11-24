@@ -306,27 +306,32 @@ class Applier:
         return False
 
 
-def apply_preset(layout, preset, results):
+def apply_preset(layout, preset, results, undo=True):
     """
-    Terapkan preset ke daftar RoleResult (dari roles.detect).
+    Terapkan preset ke daftar RoleResult.
 
+    undo=False dipakai saat layout baru dibuat (tidak perlu riwayat Undo).
     Kembalikan (jumlah elemen diubah, daftar peringatan).
     """
     ap = Applier(layout, preset)
-    stack = layout.undoStack()
-    stack.beginMacro("Rimba Layout: " + preset.get("name", "preset"))
+    stack = layout.undoStack() if undo else None
+    if stack:
+        stack.beginMacro("Rimba Layout: " + preset.get("name", "preset"))
     try:
         for res in results:
             if res.role == "abaikan":
                 continue
-            stack.beginCommand(res.item, "Rimba Layout")
+            if stack:
+                stack.beginCommand(res.item, "Rimba Layout")
             try:
                 done = ap.apply_one(res.item, res.role)
             finally:
-                stack.endCommand()
+                if stack:
+                    stack.endCommand()
             if done:
                 ap.changed += 1
     finally:
-        stack.endMacro()
+        if stack:
+            stack.endMacro()
     layout.refresh()
     return ap.changed, ap.warnings

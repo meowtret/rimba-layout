@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Uji headless tahap 1-2 Rimba Layout.
+"""Uji inti Rimba Layout: skala kertas dan preset.
 
 Jalankan:  QT_QPA_PLATFORM=offscreen python3 tests/test_core.py
 """
@@ -16,12 +16,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
-from qgis.core import QgsApplication, QgsLayoutItemLabel  # noqa: E402
+from qgis.core import QgsApplication  # noqa: E402
 
 APP = QgsApplication([], False)
 APP.initQgis()
 
-from rimba_layout.core import presets, roles, scale  # noqa: E402
+from rimba_layout.core import presets, scale  # noqa: E402
 
 FAILS = []
 
@@ -32,19 +32,18 @@ def check(cond, msg):
         FAILS.append(msg)
 
 
-from fixtures import build_pln, new_layout  # noqa: E402
+from qgis.core import (  # noqa: E402
+    QgsLayoutItemPage, QgsPrintLayout, QgsProject,
+)
 
 
-def roles_by_text(results):
-    out = {}
-    for r in results:
-        if isinstance(r.item, QgsLayoutItemLabel):
-            key = r.item.text().splitlines()[0][:28]
-        else:
-            key = "{}#{}".format(type(r.item).__name__.replace(
-                "QgsLayoutItem", ""), id(r.item) % 1000)
-        out[key] = r.role
-    return out
+def new_layout(name, paper="A3"):
+    lay = QgsPrintLayout(QgsProject.instance())
+    lay.initializeDefaults()
+    lay.setName(name)
+    lay.pageCollection().page(0).setPageSize(
+        paper, QgsLayoutItemPage.Orientation.Landscape)
+    return lay
 
 
 # ------------------------------------------------------------------ tests
@@ -94,73 +93,6 @@ for data, why in bad_cases:
 tmp = os.path.join(tempfile.gettempdir(), "rimba_layout_uji.json")
 presets.save(kem, tmp)
 check(presets.load(tmp) == kem, "simpan lalu muat ulang preset identik")
-
-print("== Tahap 2: pengenalan peran, layout PLN dua panel")
-EXPECT = {
-    "TAHUN 2024 - 2025": "label_tahun",
-    "TAHUN 2025 - 2026": "label_tahun",
-    "PETA HASIL": "judul",
-    "SK.913/MENLHK/SETJEN/PLA.0/1": "teks",
-    "DI KABUPATEN BANGGAI PROVINS": "subjudul",
-    "U": "huruf_utara",
-    "SKALA 1:25.000": "skala_teks",
-    "Proyeksi : Transverse Mercat": "catatan_proyeksi",
-    "KETERANGAN PETA :": "judul_bagian",
-    "Fungsi Kawasan Hutan": "judul_bagian",
-    "DASAR :": "judul_bagian",
-    "1. Peraturan Menteri Kehutan": "sumber_data",
-    "SUMBER PETA :": "judul_bagian",
-    "1. Peta RBI Skala 1:25.000 T": "sumber_data",
-    "CATATAN :": "judul_bagian",
-    "Batas administrasi pemerinta": "catatan",
-    "PETA SITUASI": "judul_bagian",
-    "TIM PELAKSANA": "tanda_tangan",
-    "DEWI PERMATASARI ANANDA, S.H": "tanda_tangan",
-    "KEMENTERIAN KEHUTANAN": "instansi_penerbit",
-}
-
-
-def run_case(title, lay, expect_maps, expect_labels):
-    print("-- " + title)
-    res = roles.detect(lay)
-    got = roles_by_text(res)
-    for key, role in expect_labels.items():
-        check(got.get(key) == role, "{:<30} -> {} (dapat: {})".format(
-            key, role, got.get(key)))
-    kinds = {}
-    for r in res:
-        if not isinstance(r.item, QgsLayoutItemLabel):
-            kinds.setdefault(r.role, 0)
-            kinds[r.role] += 1
-    for role, n in expect_maps.items():
-        check(kinds.get(role, 0) == n, "{} x{} (dapat {})".format(
-            role, n, kinds.get(role, 0)))
-    return res
-
-
-run_case("dua panel, TTD, tahun", build_pln(),
-         {"peta": 2, "peta_situasi": 1, "legenda": 1, "skala_bar": 1,
-          "panah_utara": 1, "logo": 1}, EXPECT)
-
-one = {k: v for k, v in EXPECT.items()
-       if k not in ("TAHUN 2025 - 2026", "TIM PELAKSANA",
-                    "DEWI PERMATASARI ANANDA, S.H")}
-run_case("satu panel, tanpa TTD", build_pln(False, False, True),
-         {"peta": 1, "peta_situasi": 1}, one)
-
-print("-- lapis ID dan peran tersimpan")
-lay = build_pln(False, False, True, ids=True)
-res = roles.detect(lay)
-src = {r.item.id(): (r.role, r.source) for r in res if r.item.id()}
-check(src.get("judul") == ("judul", roles.SRC_ID), "ID 'judul' dikenali")
-check(src.get("tahun1") == ("label_tahun", roles.SRC_ID),
-      "ID 'tahun1' dikenali")
-sk = [r for r in res if isinstance(r.item, QgsLayoutItemLabel) and
-      r.item.text().startswith("SK.913")][0]
-roles.save_role(sk.item, "subjudul")
-again = [r for r in roles.detect(lay) if r.item is sk.item][0]
-check((again.role, again.source) == ("subjudul", roles.SRC_SAVED),
-      "koreksi pengguna tersimpan dan dipakai ulang")
 
 print()
 print("GAGAL: {}".format(len(FAILS)) if FAILS else "SEMUA LULUS")

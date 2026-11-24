@@ -1,23 +1,31 @@
 # -*- coding: utf-8 -*-
-"""Dialog Rimba Layout: pilih layout dan preset, periksa peran, terapkan."""
+"""Dialog Rimba Layout: isi form, pilih preset, buat layout."""
 
 import os
 
-from qgis.core import (
-    QgsApplication, QgsLayoutItemLabel, QgsProject, QgsSettings,
-)
-from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QColor
+from qgis.core import QgsApplication, QgsProject, QgsSettings
 from qgis.PyQt.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
-    QHeaderView, QLabel, QMessageBox, QPushButton, QTableWidget,
-    QTableWidgetItem, QVBoxLayout,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
+    QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+    QPlainTextEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
-from .core import apply, presets, roles, scale
+from .core import builder, presets
 
-SKEY = "rimba_layout/"
-COL_ITEM, COL_TYPE, COL_ROLE, COL_SRC = range(4)
+SKEY = "rimba_layout/form/"
+CANVAS = "__kanvas__"
+
+PLACEHOLDER = {
+    "judul": "PETA ...\nPADA AREAL ...\nA.N. ...",
+    "sk": "SK.xxx/MENLHK/SETJEN/PLA.0/xx/20xx",
+    "lokasi": "DI KABUPATEN ... PROVINSI ...\nSELUAS ... HA",
+    "dasar": "1. Peraturan Menteri ...\n2. Keputusan Menteri LHK Nomor 399 "
+             "Tahun 2024",
+    "sumber": "1. Peta RBI Skala 1:25.000 Tahun ...\n2. Citra Sentinel-2 ...",
+    "ttd": "TIM PELAKSANA\nKETUA\n\n\n\nNAMA LENGKAP\nNIP. ...",
+    "instansi": "KEMENTERIAN KEHUTANAN\nDIREKTORAT JENDERAL ...\nBALAI ...\n"
+                "2026",
+}
 
 
 def user_preset_dir():
@@ -27,19 +35,11 @@ def user_preset_dir():
     return path
 
 
-def describe(item):
-    if isinstance(item, QgsLayoutItemLabel):
-        txt = item.currentText().strip().splitlines()
-        first = txt[0] if txt else ""
-        return first[:45] + ("…" if len(first) > 45 else "")
-    return item.displayName()
-
-
-def type_name(item):
-    name = type(item).__name__.replace("QgsLayoutItem", "")
-    return {"Label": "Label", "Map": "Peta", "Legend": "Legenda",
-            "ScaleBar": "Skala", "Picture": "Gambar",
-            "Shape": "Kotak"}.get(name, name)
+def _text_box(key, lines=3):
+    box = QPlainTextEdit()
+    box.setPlaceholderText(PLACEHOLDER.get(key, ""))
+    box.setFixedHeight(18 * lines + 14)
+    return box
 
 
 class RimbaLayoutDialog(QDialog):
@@ -47,196 +47,254 @@ class RimbaLayoutDialog(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent)
         self.iface = iface
-        self.results = []
-        self.setWindowTitle("Rimba Layout — ganti gaya layout")
-        self.resize(720, 620)
+        self.setWindowTitle("Rimba Layout — buat layout dari preset")
+        self.resize(560, 760)
         self._build_ui()
         self.reload_presets()
-        self.reload_layouts()
+        self.reload_themes()
+        self._load()
 
     # ------------------------------------------------------------ UI
     def _build_ui(self):
-        main = QVBoxLayout(self)
-        form = QFormLayout()
-        row = QHBoxLayout()
-        self.cb_layout = QComboBox()
-        btn = QPushButton("↻")
-        btn.setFixedWidth(30)
-        btn.setToolTip("Muat ulang daftar layout")
-        btn.clicked.connect(self.reload_layouts)
-        row.addWidget(self.cb_layout, 1)
-        row.addWidget(btn)
-        form.addRow("Layout", row)
+        outer = QVBoxLayout(self)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        inner = QWidget()
+        main = QVBoxLayout(inner)
+        scroll.setWidget(inner)
+        outer.addWidget(scroll, 1)
+
+        g = QGroupBox("Halaman")
+        f = QFormLayout(g)
+        self.ed_name = QLineEdit()
+        self.ed_name.setPlaceholderText("Nama layout di proyek")
+        f.addRow("Nama layout", self.ed_name)
         self.cb_preset = QComboBox()
-        form.addRow("Preset", self.cb_preset)
-        self.lbl_info = QLabel()
-        self.lbl_info.setWordWrap(True)
-        self.lbl_info.setStyleSheet("color:#555;")
-        form.addRow("", self.lbl_info)
-        main.addLayout(form)
+        f.addRow("Preset", self.cb_preset)
+        self.lbl_desc = QLabel()
+        self.lbl_desc.setWordWrap(True)
+        self.lbl_desc.setStyleSheet("color:#777;")
+        f.addRow("", self.lbl_desc)
+        self.cb_paper = QComboBox()
+        for p in builder.PAPERS:
+            self.cb_paper.addItem(p + " mendatar", p)
+        f.addRow("Kertas", self.cb_paper)
+        self.cb_panels = QComboBox()
+        self.cb_panels.addItem("Satu panel peta", 1)
+        self.cb_panels.addItem("Dua panel peta", 2)
+        f.addRow("Panel", self.cb_panels)
+        self.cb_theme1 = QComboBox()
+        self.cb_theme2 = QComboBox()
+        f.addRow("Isi panel 1", self.cb_theme1)
+        f.addRow("Isi panel 2", self.cb_theme2)
+        self.ed_year1 = QLineEdit()
+        self.ed_year2 = QLineEdit()
+        for ed in (self.ed_year1, self.ed_year2):
+            ed.setPlaceholderText("mis. TAHUN 2024 - 2025 (kosongkan bila "
+                                  "tidak perlu)")
+        f.addRow("Label tahun panel 1", self.ed_year1)
+        f.addRow("Label tahun panel 2", self.ed_year2)
+        row = QHBoxLayout()
+        self.ed_logo = QLineEdit()
+        self.ed_logo.setPlaceholderText("Opsional: file PNG/SVG/JPG")
+        btn = QPushButton("…")
+        btn.setFixedWidth(30)
+        btn.clicked.connect(self.pick_logo)
+        row.addWidget(self.ed_logo, 1)
+        row.addWidget(btn)
+        f.addRow("Logo instansi", row)
+        main.addWidget(g)
 
-        main.addWidget(QLabel(
-            "Periksa peran tiap elemen. Ubah kolom <b>Peran</b> bila "
-            "tebakannya salah; koreksi disimpan di layout."))
-        self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(
-            ["Elemen", "Tipe", "Peran", "Sumber"])
-        hh = self.table.horizontalHeader()
-        hh.setSectionResizeMode(COL_ITEM, QHeaderView.ResizeMode.Stretch)
-        for c in (COL_TYPE, COL_ROLE):
-            hh.setSectionResizeMode(
-                c, QHeaderView.ResizeMode.ResizeToContents)
-        hh.setSectionResizeMode(COL_SRC, QHeaderView.ResizeMode.Interactive)
-        self.table.setColumnWidth(COL_SRC, 190)
-        self.table.verticalHeader().setVisible(False)
-        main.addWidget(self.table, 1)
-        self.lbl_empty = QLabel()
-        self.lbl_empty.setWordWrap(True)
-        self.lbl_empty.setStyleSheet(
-            "color:#8a6d00; font-weight:bold; padding:6px;")
-        self.lbl_empty.hide()
-        main.addWidget(self.lbl_empty)
+        g = QGroupBox("Isi informasi tepi")
+        f = QFormLayout(g)
+        self.ed_judul = _text_box("judul", 4)
+        f.addRow("Judul", self.ed_judul)
+        self.ed_sk = QLineEdit()
+        self.ed_sk.setPlaceholderText(PLACEHOLDER["sk"])
+        f.addRow("Nomor SK", self.ed_sk)
+        self.ed_lokasi = _text_box("lokasi", 2)
+        f.addRow("Lokasi / luas", self.ed_lokasi)
+        self.ed_dasar = _text_box("dasar", 3)
+        f.addRow("Dasar", self.ed_dasar)
+        self.ed_sumber = _text_box("sumber", 3)
+        f.addRow("Sumber peta", self.ed_sumber)
+        self.ed_catatan = _text_box("catatan", 2)
+        f.addRow("Catatan", self.ed_catatan)
+        self.chk_ttd = QCheckBox("Tambahkan blok tanda tangan")
+        f.addRow("", self.chk_ttd)
+        self.ed_ttd = _text_box("ttd", 4)
+        f.addRow("Tanda tangan", self.ed_ttd)
+        self.ed_instansi = _text_box("instansi", 4)
+        f.addRow("Instansi penerbit", self.ed_instansi)
+        main.addWidget(g)
+        main.addStretch(1)
 
+        note = QLabel("Peta diambil dari kanvas QGIS saat ini: layer yang "
+                      "tampil, cakupan, dan sistem koordinatnya.")
+        note.setWordWrap(True)
+        note.setStyleSheet("color:#777;")
+        outer.addWidget(note)
         bb = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
-        self.btn_scan = bb.addButton("Pindai ulang", role.ActionRole)
-        self.btn_apply = bb.addButton("Terapkan", role.ApplyRole)
+        self.btn_build = bb.addButton("Buat layout", role.ActionRole)
         bb.addButton("Tutup", role.RejectRole)
-        self.btn_scan.clicked.connect(self.scan)
-        self.btn_apply.clicked.connect(self.apply)
+        self.btn_build.clicked.connect(self.build)
         bb.rejected.connect(self.reject)
-        main.addWidget(bb)
+        outer.addWidget(bb)
 
-        self.cb_layout.currentIndexChanged.connect(self.scan)
-        self.cb_preset.currentIndexChanged.connect(self.update_info)
+        self.cb_preset.currentIndexChanged.connect(self.update_desc)
+        self.cb_panels.currentIndexChanged.connect(self.update_enabled)
+        self.chk_ttd.toggled.connect(self.update_enabled)
 
     # ------------------------------------------------------------ data
     def reload_presets(self):
-        last = QgsSettings().value(SKEY + "preset", "", type=str)
+        current = self.cb_preset.currentData()
         self.cb_preset.blockSignals(True)
         self.cb_preset.clear()
         for name, path, builtin in presets.list_presets(user_preset_dir()):
-            label = name if builtin else name + " (milik saya)"
-            self.cb_preset.addItem(label, path)
-        i = self.cb_preset.findData(last)
+            self.cb_preset.addItem(
+                name if builtin else name + " (milik saya)", path)
+        i = self.cb_preset.findData(current)
         if i >= 0:
             self.cb_preset.setCurrentIndex(i)
         self.cb_preset.blockSignals(False)
+        self.update_desc()
 
-    def reload_layouts(self, preferred=None):
-        current = preferred or self.cb_layout.currentText()
-        self.cb_layout.blockSignals(True)
-        self.cb_layout.clear()
-        for lay in QgsProject.instance().layoutManager().printLayouts():
-            self.cb_layout.addItem(lay.name())
-        i = self.cb_layout.findText(current)
-        if i >= 0:
-            self.cb_layout.setCurrentIndex(i)
-        self.cb_layout.blockSignals(False)
-        self.scan()
+    def reload_themes(self):
+        names = QgsProject.instance().mapThemeCollection().mapThemes()
+        for cb in (self.cb_theme1, self.cb_theme2):
+            cur = cb.currentData()
+            cb.clear()
+            cb.addItem("Kanvas saat ini", CANVAS)
+            for n in names:
+                cb.addItem("Tema: " + n, n)
+            i = cb.findData(cur)
+            if i >= 0:
+                cb.setCurrentIndex(i)
 
-    def current_layout(self):
-        name = self.cb_layout.currentText()
-        if not name:
-            return None
-        return QgsProject.instance().layoutManager().layoutByName(name)
+    def update_desc(self):
+        pre = self.current_preset(quiet=True)
+        self.lbl_desc.setText(pre.get("description", "") if pre else "")
 
-    def current_preset(self):
+    def update_enabled(self):
+        two = self.cb_panels.currentData() == 2
+        self.cb_theme2.setEnabled(two)
+        self.ed_year2.setEnabled(two)
+        self.ed_ttd.setEnabled(self.chk_ttd.isChecked())
+
+    def current_preset(self, quiet=False):
         path = self.cb_preset.currentData()
         if not path:
             return None
         try:
             return presets.load(path)
         except presets.PresetError as err:
-            QMessageBox.warning(self, "Rimba Layout",
-                                "Preset tidak bisa dipakai:\n{}".format(err))
+            if not quiet:
+                QMessageBox.warning(self, "Rimba Layout",
+                                    "Preset tidak bisa dipakai:\n{}".format(
+                                        err))
             return None
 
-    def update_info(self):
-        lay = self.current_layout()
+    def pick_logo(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Pilih logo", self.ed_logo.text(),
+            "Gambar (*.png *.svg *.jpg *.jpeg)")
+        if path:
+            self.ed_logo.setText(path)
+
+    # ------------------------------------------------------- simpan isian
+    def _fields(self):
+        return {
+            "name": self.ed_name, "year1": self.ed_year1,
+            "year2": self.ed_year2, "logo": self.ed_logo,
+            "sk": self.ed_sk, "judul": self.ed_judul,
+            "lokasi": self.ed_lokasi, "dasar": self.ed_dasar,
+            "sumber": self.ed_sumber, "catatan": self.ed_catatan,
+            "ttd": self.ed_ttd, "instansi": self.ed_instansi,
+        }
+
+    @staticmethod
+    def _get(w):
+        return w.toPlainText() if isinstance(w, QPlainTextEdit) else w.text()
+
+    def _load(self):
+        s = QgsSettings()
+        for key, w in self._fields().items():
+            default = builder.DEFAULT_CATATAN if key == "catatan" else ""
+            val = s.value(SKEY + key, default, type=str)
+            if isinstance(w, QPlainTextEdit):
+                w.setPlainText(val)
+            else:
+                w.setText(val)
+        i = self.cb_paper.findData(s.value(SKEY + "paper", "A3", type=str))
+        if i >= 0:
+            self.cb_paper.setCurrentIndex(i)
+        i = self.cb_panels.findData(s.value(SKEY + "panels", 1, type=int))
+        if i >= 0:
+            self.cb_panels.setCurrentIndex(i)
+        i = self.cb_preset.findData(s.value(SKEY + "preset", "", type=str))
+        if i >= 0:
+            self.cb_preset.setCurrentIndex(i)
+        self.chk_ttd.setChecked(s.value(SKEY + "use_ttd", False, type=bool))
+        self.update_enabled()
+
+    def _save(self):
+        s = QgsSettings()
+        for key, w in self._fields().items():
+            s.setValue(SKEY + key, self._get(w))
+        s.setValue(SKEY + "paper", self.cb_paper.currentData())
+        s.setValue(SKEY + "panels", self.cb_panels.currentData())
+        s.setValue(SKEY + "preset", self.cb_preset.currentData())
+        s.setValue(SKEY + "use_ttd", self.chk_ttd.isChecked())
+
+    # ------------------------------------------------------------ buat
+    def build(self):
         pre = self.current_preset()
-        parts = []
-        if pre:
-            parts.append(pre.get("description", ""))
-        if lay:
-            short = scale.page_short_side_mm(lay)
-            f = scale.factor(short, pre.get("base_paper", "A3")
-                             if pre else "A3")
-            parts.append("Kertas sisi pendek {:.0f} mm, ukuran preset "
-                         "dikali {}.".format(short,
-                                             "{:.2f}".format(f).replace(
-                                                 ".", ",")))
-        self.lbl_info.setText(" ".join(p for p in parts if p))
-
-    def _show_empty(self, text):
-        self.lbl_empty.setText(text)
-        self.lbl_empty.setVisible(bool(text))
-        self.btn_apply.setEnabled(not text)
-
-    def scan(self):
-        self.table.setRowCount(0)
-        self.results = []
-        lay = self.current_layout()
-        self.update_info()
-        if not lay:
-            self._show_empty(
-                "Proyek ini belum punya Print Layout. Buat layout dulu "
-                "(Project \u2192 New Print Layout), lalu klik Pindai ulang.")
+        if pre is None:
             return
-        self.results = roles.detect(lay)
-        if not self.results:
-            self._show_empty(
-                "Layout '{}' belum berisi elemen (peta, label, legenda, "
-                "skala). Rimba Layout hanya mengganti gaya elemen yang sudah "
-                "ada: isi layout dulu, lalu klik Pindai ulang.".format(
-                    lay.name()))
+        canvas = self.iface.mapCanvas()
+        layers = canvas.layers()
+        panels = self.cb_panels.currentData()
+        themes = [self.cb_theme1.currentData(), self.cb_theme2.currentData()]
+        used = themes[:panels]
+        if not layers and CANVAS in used:
+            QMessageBox.warning(
+                self, "Rimba Layout",
+                "Kanvas belum menampilkan layer. Tampilkan layer yang ingin "
+                "dipetakan dulu, lalu coba lagi.")
             return
-        self._show_empty("")
-        self.table.setRowCount(len(self.results))
-        keys = list(roles.ROLE_LABELS)
-        for row, res in enumerate(self.results):
-            it = QTableWidgetItem(describe(res.item))
-            it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, COL_ITEM, it)
-            ty = QTableWidgetItem(type_name(res.item))
-            ty.setFlags(ty.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.table.setItem(row, COL_TYPE, ty)
-            combo = QComboBox()
-            for k in keys:
-                combo.addItem(roles.ROLE_LABELS[k], k)
-            combo.setCurrentIndex(max(0, combo.findData(res.role)))
-            combo.setProperty("orig", res.role)
-            self.table.setCellWidget(row, COL_ROLE, combo)
-            src = QTableWidgetItem(
-                "{} – {}".format(res.source, res.reason))
-            src.setFlags(src.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            if res.source == roles.SRC_GUESS:
-                src.setForeground(QColor("#8a6d00"))
-            self.table.setItem(row, COL_SRC, src)
-
-    # ------------------------------------------------------------ apply
-    def apply(self):
-        lay = self.current_layout()
-        pre = self.current_preset()
-        if not lay or not pre:
-            QMessageBox.warning(self, "Rimba Layout",
-                                "Pilih layout dan preset dulu.")
-            return
-        for row, res in enumerate(self.results):
-            combo = self.table.cellWidget(row, COL_ROLE)
-            chosen = combo.currentData()
-            if chosen != combo.property("orig"):
-                roles.save_role(res.item, chosen)
-            res.role = chosen
-        n, warnings = apply.apply_preset(lay, pre, self.results)
-        QgsSettings().setValue(SKEY + "preset", self.cb_preset.currentData())
+        opts = builder.BuildOptions(
+            name=self.ed_name.text().strip() or "Peta Rimba Layout",
+            paper=self.cb_paper.currentData(),
+            panels=panels,
+            themes=[None if t == CANVAS else t for t in themes],
+            years=[self.ed_year1.text().strip(),
+                   self.ed_year2.text().strip() if panels == 2 else ""],
+            judul=self.ed_judul.toPlainText().strip() or "JUDUL PETA",
+            sk=self.ed_sk.text().strip(),
+            lokasi=self.ed_lokasi.toPlainText().strip(),
+            dasar=self.ed_dasar.toPlainText().strip(),
+            sumber=self.ed_sumber.toPlainText().strip(),
+            catatan=self.ed_catatan.toPlainText().strip(),
+            ttd=(self.ed_ttd.toPlainText().strip()
+                 if self.chk_ttd.isChecked() else ""),
+            logo=self.ed_logo.text().strip(),
+            instansi=self.ed_instansi.toPlainText().strip(),
+            layers=layers,
+            extent=canvas.extent(),
+            crs=canvas.mapSettings().destinationCrs(),
+        )
+        lay, warnings = builder.build_layout(QgsProject.instance(), pre,
+                                             opts)
+        self._save()
+        self.iface.openLayoutDesigner(lay)
         self.iface.messageBar().pushSuccess(
-            "Rimba Layout", "Preset '{}' diterapkan ke {} elemen di '{}'. "
-            "Ctrl+Z di Layout Designer untuk membatalkan.".format(
-                pre["name"], n, lay.name()))
+            "Rimba Layout", "Layout '{}' dibuat dengan preset '{}'.".format(
+                lay.name(), pre["name"]))
+        if opts.logo and not os.path.exists(opts.logo):
+            warnings.append("File logo tidak ditemukan: " + opts.logo)
         if warnings:
             QMessageBox.information(
                 self, "Rimba Layout — perlu dicek",
-                "Preset sudah diterapkan, tapi ada yang perlu dicek:\n\n- " +
+                "Layout sudah dibuat, tapi ada yang perlu dicek:\n\n- " +
                 "\n- ".join(warnings))
-        self.scan()
