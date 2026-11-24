@@ -1,0 +1,169 @@
+{
+  "name": "Kemenhut SK 399/2024",
+  "version": 1,
+  "base_paper": "A3",
+  "description": "Mengikuti SK MenLHK 399/2024 dan pola layout kerja BPHL/BPKH: semua Arial hitam, judul kapital bold rata tengah.",
+  "roles": {
+    "judul": {
+      "font": "Arial",
+      "size": 18,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true,
+      "align": "center"
+    },
+    "subjudul": {
+      "font": "Arial",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "teks": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000"
+    },
+    "catatan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000"
+    },
+    "catatan_proyeksi": {
+      "font": "Arial",
+      "size": 9,
+      "color": "#000000"
+    },
+    "sumber_data": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000"
+    },
+    "judul_bagian": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true
+    },
+    "skala_teks": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true,
+      "align": "center"
+    },
+    "label_tahun": {
+      "font": "Arial",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true,
+      "align": "center",
+      "frame": true
+    },
+    "tanda_tangan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000",
+      "align": "center"
+    },
+    "instansi_penerbit": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true,
+      "align": "center"
+    },
+    "huruf_utara": {
+      "font": "Arial",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "legenda": {
+      "title": {
+        "font": "Arial",
+        "size": 11,
+        "color": "#000000",
+        "bold": true,
+        "uppercase": true
+      },
+      "group": {
+        "font": "Arial",
+        "size": 10,
+        "color": "#000000",
+        "bold": true
+      },
+      "item": {
+        "font": "Arial",
+        "size": 9,
+        "color": "#000000"
+      }
+    },
+    "skala_bar": {
+      "style": "Single Box",
+      "line_width_mm": 0.3,
+      "font": {
+        "font": "Arial",
+        "size": 8,
+        "color": "#000000"
+      }
+    },
+    "skala_angka": {
+      "font": {
+        "font": "Arial",
+        "size": 10,
+        "color": "#000000",
+        "bold": true
+      }
+    },
+    "peta": {
+      "frame_width_mm": 0.7,
+      "frame_color": "#000000"
+    },
+    "peta_situasi": {
+      "frame_width_mm": 0.4,
+      "frame_color": "#000000"
+    },
+    "kotak": {
+      "line_width_mm": 0.4,
+      "color": "#000000"
+    }
+  },
+  "grid": {
+    "format": "dms",
+    "pad": false,
+    "spaced": true,
+    "decimals": 0,
+    "style": "lines",
+    "line_color": "#BEE8FF",
+    "line_width_mm": 0.2,
+    "frame": "ticks_out",
+    "frame_width_mm": 1.5,
+    "font": "Arial",
+    "size": 9,
+    "color": "#000000",
+    "side_vertical": true,
+    "max_lines": 2
+  },
+  "grid_situasi": {
+    "format": "dms",
+    "pad": false,
+    "spaced": true,
+    "decimals": 0,
+    "style": "lines",
+    "line_color": "#BEE8FF",
+    "line_width_mm": 0.15,
+    "frame": "ticks_out",
+    "frame_width_mm": 1.0,
+    "font": "Arial",
+    "size": 5,
+    "color": "#000000",
+    "side_vertical": true,
+    "max_lines": 4
+  }
+}

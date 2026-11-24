@@ -1,0 +1,148 @@
+{
+  "name": "Minimalis",
+  "version": 1,
+  "base_paper": "A3",
+  "description": "Huruf tipis abu tua, tanpa garis grid, tick ke luar.",
+  "roles": {
+    "judul": {
+      "font": "Arial",
+      "size": 18,
+      "color": "#000000",
+      "align": "left"
+    },
+    "subjudul": {
+      "font": "Arial",
+      "size": 12,
+      "color": "#333333"
+    },
+    "teks": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000"
+    },
+    "catatan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#333333"
+    },
+    "catatan_proyeksi": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#333333"
+    },
+    "sumber_data": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#333333"
+    },
+    "judul_bagian": {
+      "font": "Arial",
+      "size": 9,
+      "color": "#333333",
+      "bold": true,
+      "uppercase": true
+    },
+    "skala_teks": {
+      "font": "Arial",
+      "size": 9,
+      "color": "#333333"
+    },
+    "label_tahun": {
+      "font": "Arial",
+      "size": 12,
+      "color": "#000000",
+      "align": "center",
+      "frame": false
+    },
+    "tanda_tangan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#333333",
+      "align": "center"
+    },
+    "instansi_penerbit": {
+      "font": "Arial",
+      "size": 9,
+      "color": "#333333",
+      "align": "center"
+    },
+    "huruf_utara": {
+      "font": "Arial",
+      "size": 12,
+      "color": "#000000",
+      "align": "center"
+    },
+    "legenda": {
+      "title": {
+        "font": "Arial",
+        "size": 10,
+        "color": "#000000"
+      },
+      "group": {
+        "font": "Arial",
+        "size": 9,
+        "color": "#000000",
+        "bold": true
+      },
+      "item": {
+        "font": "Arial",
+        "size": 9,
+        "color": "#000000"
+      }
+    },
+    "skala_bar": {
+      "style": "Line Ticks Middle",
+      "line_width_mm": 0.2,
+      "font": {
+        "font": "Arial",
+        "size": 8,
+        "color": "#333333"
+      }
+    },
+    "skala_angka": {
+      "font": {
+        "font": "Arial",
+        "size": 9,
+        "color": "#333333"
+      }
+    },
+    "peta": {
+      "frame_width_mm": 0.35,
+      "frame_color": "#000000"
+    },
+    "peta_situasi": {
+      "frame_width_mm": 0.25,
+      "frame_color": "#000000"
+    },
+    "kotak": {
+      "line_width_mm": 0.25,
+      "color": "#333333"
+    }
+  },
+  "grid": {
+    "format": "dms",
+    "pad": true,
+    "spaced": false,
+    "decimals": 0,
+    "style": "frame",
+    "frame": "ticks_out",
+    "frame_width_mm": 1.2,
+    "font": "Arial",
+    "size": 8,
+    "color": "#333333",
+    "side_vertical": true
+  },
+  "grid_situasi": {
+    "format": "dm",
+    "pad": true,
+    "spaced": false,
+    "decimals": 0,
+    "style": "frame",
+    "frame": "ticks_out",
+    "frame_width_mm": 0.8,
+    "font": "Arial",
+    "size": 5,
+    "color": "#333333",
+    "side_vertical": true
+  }
+}

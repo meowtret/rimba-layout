@@ -1,0 +1,160 @@
+{
+  "name": "Klasik",
+  "version": 1,
+  "base_paper": "A3",
+  "description": "Judul serif, grid berbingkai zebra, garis grid abu tipis.",
+  "roles": {
+    "judul": {
+      "font": "Times New Roman",
+      "size": 20,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true,
+      "align": "center"
+    },
+    "subjudul": {
+      "font": "Arial",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "teks": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000"
+    },
+    "catatan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000"
+    },
+    "catatan_proyeksi": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000"
+    },
+    "sumber_data": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000"
+    },
+    "judul_bagian": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "uppercase": true
+    },
+    "skala_teks": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "label_tahun": {
+      "font": "Arial",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "align": "center",
+      "frame": true
+    },
+    "tanda_tangan": {
+      "font": "Arial",
+      "size": 8,
+      "color": "#000000",
+      "align": "center"
+    },
+    "instansi_penerbit": {
+      "font": "Arial",
+      "size": 10,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "huruf_utara": {
+      "font": "Times New Roman",
+      "size": 14,
+      "color": "#000000",
+      "bold": true,
+      "align": "center"
+    },
+    "legenda": {
+      "title": {
+        "font": "Arial",
+        "size": 11,
+        "color": "#000000",
+        "bold": true
+      },
+      "group": {
+        "font": "Arial",
+        "size": 10,
+        "color": "#000000",
+        "bold": true
+      },
+      "item": {
+        "font": "Arial",
+        "size": 9,
+        "color": "#000000"
+      }
+    },
+    "skala_bar": {
+      "style": "Single Box",
+      "line_width_mm": 0.3,
+      "font": {
+        "font": "Arial",
+        "size": 8,
+        "color": "#000000"
+      }
+    },
+    "skala_angka": {
+      "font": {
+        "font": "Arial",
+        "size": 10,
+        "color": "#000000"
+      }
+    },
+    "peta": {
+      "frame_width_mm": 0.7,
+      "frame_color": "#000000"
+    },
+    "peta_situasi": {
+      "frame_width_mm": 0.4,
+      "frame_color": "#000000"
+    },
+    "kotak": {
+      "line_width_mm": 0.5,
+      "color": "#000000"
+    }
+  },
+  "grid": {
+    "format": "dms",
+    "pad": true,
+    "spaced": false,
+    "decimals": 0,
+    "style": "lines",
+    "line_color": "#9E9E9E",
+    "line_width_mm": 0.15,
+    "frame": "zebra",
+    "frame_width_mm": 2.0,
+    "font": "Arial",
+    "size": 9,
+    "color": "#000000",
+    "side_vertical": true
+  },
+  "grid_situasi": {
+    "format": "dms",
+    "pad": true,
+    "spaced": false,
+    "decimals": 0,
+    "style": "frame",
+    "frame": "zebra",
+    "frame_width_mm": 1.0,
+    "font": "Arial",
+    "size": 5,
+    "color": "#000000",
+    "side_vertical": true
+  }
+}
