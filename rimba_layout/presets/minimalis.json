@@ -6,87 +6,87 @@
   "roles": {
     "judul": {
       "font": "Arial",
-      "size": 18,
+      "size": 10,
       "color": "#000000",
       "align": "left"
     },
     "subjudul": {
       "font": "Arial",
-      "size": 12,
+      "size": 7.5,
       "color": "#333333"
     },
     "teks": {
       "font": "Arial",
-      "size": 10,
+      "size": 6.5,
       "color": "#000000"
     },
     "catatan": {
       "font": "Arial",
-      "size": 8,
+      "size": 5.5,
       "color": "#333333"
     },
     "catatan_proyeksi": {
       "font": "Arial",
-      "size": 8,
+      "size": 5.5,
       "color": "#333333"
     },
     "sumber_data": {
       "font": "Arial",
-      "size": 8,
+      "size": 5.5,
       "color": "#333333"
     },
     "judul_bagian": {
       "font": "Arial",
-      "size": 9,
+      "size": 6,
       "color": "#333333",
       "bold": true,
       "uppercase": true
     },
     "skala_teks": {
       "font": "Arial",
-      "size": 9,
+      "size": 6,
       "color": "#333333"
     },
     "label_tahun": {
       "font": "Arial",
-      "size": 12,
+      "size": 9,
       "color": "#000000",
       "align": "center",
       "frame": false
     },
     "tanda_tangan": {
       "font": "Arial",
-      "size": 8,
+      "size": 5.5,
       "color": "#333333",
       "align": "center"
     },
     "instansi_penerbit": {
       "font": "Arial",
-      "size": 9,
+      "size": 5.5,
       "color": "#333333",
       "align": "center"
     },
     "huruf_utara": {
       "font": "Arial",
-      "size": 12,
+      "size": 9,
       "color": "#000000",
       "align": "center"
     },
     "legenda": {
       "title": {
         "font": "Arial",
-        "size": 10,
+        "size": 6.5,
         "color": "#000000"
       },
       "group": {
         "font": "Arial",
-        "size": 9,
+        "size": 6,
         "color": "#000000",
         "bold": true
       },
       "item": {
         "font": "Arial",
-        "size": 9,
+        "size": 6,
         "color": "#000000"
       }
     },
@@ -95,14 +95,14 @@
       "line_width_mm": 0.2,
       "font": {
         "font": "Arial",
-        "size": 8,
+        "size": 5.5,
         "color": "#333333"
       }
     },
     "skala_angka": {
       "font": {
         "font": "Arial",
-        "size": 9,
+        "size": 6,
         "color": "#333333"
       }
     },
@@ -128,9 +128,11 @@
     "frame": "ticks_out",
     "frame_width_mm": 1.2,
     "font": "Arial",
-    "size": 8,
+    "size": 6,
     "color": "#333333",
-    "side_vertical": true
+    "side_vertical": true,
+    "max_lines": 3,
+    "max_lines_long": 6
   },
   "grid_situasi": {
     "format": "dm",
@@ -141,8 +143,10 @@
     "frame": "ticks_out",
     "frame_width_mm": 0.8,
     "font": "Arial",
-    "size": 5,
+    "size": 3.5,
     "color": "#333333",
-    "side_vertical": true
+    "side_vertical": true,
+    "max_lines": 2,
+    "max_lines_long": 4
   }
 }

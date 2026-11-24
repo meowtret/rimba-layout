@@ -5,7 +5,7 @@ Preset ditulis untuk A3 (sisi pendek 297 mm)."""
 
 BASE_SHORT_MM = {"A4": 210.0, "A3": 297.0, "A2": 420.0, "A1": 594.0,
                  "A0": 841.0}
-MIN_FONT_PT = 6.0
+MIN_FONT_PT = 3.5
 
 
 def _mm_unit():
@@ -30,7 +30,7 @@ def factor(short_side_mm, base="A3"):
 
 
 def font_pt(value, f):
-    """Ukuran huruf terskala, dibulatkan ke 0,5 pt, minimal 6 pt."""
+    """Ukuran huruf terskala, dibulatkan ke 0,5 pt, minimal 3,5 pt."""
     scaled = round(float(value) * f * 2.0) / 2.0
     return max(MIN_FONT_PT, scaled)
 
