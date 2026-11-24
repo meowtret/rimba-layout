@@ -5,7 +5,7 @@ qgisMaximumVersion=4.99
 description=Ganti gaya Print Layout yang sudah ada dengan preset (Kemenhut SK 399/2024, Klasik, Minimalis) tanpa memindahkan elemen.
 about=Rimba Layout mengenali peran setiap elemen Print Layout (judul, catatan, dasar dan sumber data, legenda, skala, panel peta, peta situasi, label tahun, tanda tangan, instansi penerbit) lalu menerapkan preset gaya sekaligus: jenis dan ukuran huruf, kapital, perataan, tebal bingkai, dan grid berlabel BT/BB LU/LS. Posisi elemen tidak diubah, ukuran menyesuaikan kertas A4 sampai A0, dan satu Ctrl+Z membatalkan semuanya. Koreksi peran disimpan di layout.
  English: Restyles existing Print Layouts with presets (including an Indonesian Ministry of Forestry standard) without moving items.
-version=0.1.0
+version=0.1.1
 author=Alfian (Ian)
 email=alfianq2@gmail.com
 tags=layout, print layout, style, preset, cartography, indonesia, grid, kemenhut
@@ -16,4 +16,5 @@ category=Plugins
 icon=icon.png
 experimental=True
 deprecated=False
-changelog=0.1.0 - Versi uji pertama: tiga preset, pengenalan peran, penerapan gaya, dialog koreksi peran.
+changelog=0.1.1 - Dialog memberi keterangan bila layout masih kosong atau proyek belum punya layout.
+ 0.1.0 - Versi uji pertama: tiga preset, pengenalan peran, penerapan gaya, dialog koreksi peran.

@@ -53,6 +53,20 @@ check(dlg.cb_preset.count() >= 3, "preset bawaan tampil di daftar")
 check(dlg.table.rowCount() == len(roles.detect(lay)),
       "tabel peran berisi {} elemen".format(dlg.table.rowCount()))
 
+print("== Layout kosong")
+from qgis.core import QgsPrintLayout  # noqa: E402
+kosong = QgsPrintLayout(QgsProject.instance())
+kosong.initializeDefaults()
+kosong.setName("a")
+QgsProject.instance().layoutManager().addLayout(kosong)
+dlg.reload_layouts("a")
+check(dlg.table.rowCount() == 0 and not dlg.lbl_empty.isHidden() and
+      not dlg.btn_apply.isEnabled() and "belum berisi" in
+      dlg.lbl_empty.text(), "layout kosong: ada keterangan, Terapkan mati")
+dlg.reload_layouts("Peta Hasil PLN")
+check(dlg.lbl_empty.isHidden() and dlg.btn_apply.isEnabled(),
+      "layout berisi: keterangan hilang, Terapkan aktif")
+
 print("== Koreksi peran lalu terapkan")
 i = dlg.cb_preset.findText("Kemenhut SK 399/2024")
 dlg.cb_preset.setCurrentIndex(i)

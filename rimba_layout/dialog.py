@@ -90,6 +90,12 @@ class RimbaLayoutDialog(QDialog):
         self.table.setColumnWidth(COL_SRC, 190)
         self.table.verticalHeader().setVisible(False)
         main.addWidget(self.table, 1)
+        self.lbl_empty = QLabel()
+        self.lbl_empty.setWordWrap(True)
+        self.lbl_empty.setStyleSheet(
+            "color:#8a6d00; font-weight:bold; padding:6px;")
+        self.lbl_empty.hide()
+        main.addWidget(self.lbl_empty)
 
         bb = QDialogButtonBox()
         role = QDialogButtonBox.ButtonRole
@@ -162,14 +168,30 @@ class RimbaLayoutDialog(QDialog):
                                                  ".", ",")))
         self.lbl_info.setText(" ".join(p for p in parts if p))
 
+    def _show_empty(self, text):
+        self.lbl_empty.setText(text)
+        self.lbl_empty.setVisible(bool(text))
+        self.btn_apply.setEnabled(not text)
+
     def scan(self):
         self.table.setRowCount(0)
         self.results = []
         lay = self.current_layout()
         self.update_info()
         if not lay:
+            self._show_empty(
+                "Proyek ini belum punya Print Layout. Buat layout dulu "
+                "(Project \u2192 New Print Layout), lalu klik Pindai ulang.")
             return
         self.results = roles.detect(lay)
+        if not self.results:
+            self._show_empty(
+                "Layout '{}' belum berisi elemen (peta, label, legenda, "
+                "skala). Rimba Layout hanya mengganti gaya elemen yang sudah "
+                "ada: isi layout dulu, lalu klik Pindai ulang.".format(
+                    lay.name()))
+            return
+        self._show_empty("")
         self.table.setRowCount(len(self.results))
         keys = list(roles.ROLE_LABELS)
         for row, res in enumerate(self.results):
