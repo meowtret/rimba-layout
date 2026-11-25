@@ -13,7 +13,8 @@ from qgis.core import (  # noqa: E402
     QgsApplication, QgsCoordinateReferenceSystem, QgsExpression,
     QgsExpressionContext, QgsExpressionContextScope, QgsFeature,
     QgsGeometry, QgsLayoutExporter, QgsLayoutItemLabel, QgsLayoutItemLegend,
-    QgsLayoutItemMap, QgsLayoutItemPicture, QgsLayoutItemScaleBar,
+    QgsLayoutItemGroup, QgsLayoutItemMap, QgsLayoutItemPicture,
+    QgsLayoutItemScaleBar,
     QgsProject, QgsRectangle, QgsVectorLayer,
 )
 
@@ -144,6 +145,13 @@ for title, preset, extra in CASES:
           kv.pos().x() > kn.pos().x() + kn.rect().width() - 0.01 and
           abs(kn.pos().y() - kv.pos().y()) < 1e-6,
           "kolom proyeksi: tanda ':' sejajar dalam satu kolom")
+    groups = {i.id(): i for i in lay.items()
+              if isinstance(i, QgsLayoutItemGroup)}
+    gs, gp = groups.get("grup_skala_bar"), groups.get("grup_proyeksi")
+    check(gs is not None and set(gs.items()) == {sb, sbc},
+          "skala bar Cm + Km dalam satu group")
+    check(gp is not None and set(gp.items()) == {kn, kv},
+          "kolom proyeksi dalam satu group")
     arrow = by_id(lay, "panah_utara")
     check(isinstance(arrow, QgsLayoutItemPicture) and
           arrow.linkedMap() is m1, "panah utara terhubung ke Map 1")

@@ -5,7 +5,7 @@ qgisMaximumVersion=4.99
 description=Buat Print Layout lengkap dari preset (Kemenhut SK 399/2024, Klasik, Minimalis) langsung dari kanvas: panel peta dengan grid BT/BB LU/LS dan informasi tepi.
 about=Rimba Layout membuat layout peta siap cetak dalam satu klik. Isi judul, nomor SK, lokasi, dasar, sumber, catatan, tanda tangan, dan instansi penerbit di form; peta diambil dari kanvas QGIS (layer, cakupan, CRS). Hasilnya: satu atau dua panel peta dengan grid BT/BB LU/LS, label tahun opsional, panel informasi tepi berisi logo, judul, arah utara, skala angka dan skala bar, catatan proyeksi, legenda otomatis, peta situasi dengan penanda lokasi, blok tanda tangan opsional, dan instansi penerbit. Ukuran menyesuaikan kertas A4 sampai A0.
  English: Restyles existing Print Layouts with presets (including an Indonesian Ministry of Forestry standard) without moving items.
-version=0.2.2
+version=0.2.3
 author=Alfian (Ian)
 email=alfianq2@gmail.com
 tags=layout, print layout, template, preset, cartography, indonesia, grid, kemenhut
@@ -16,7 +16,8 @@ category=Plugins
 icon=icon.png
 experimental=True
 deprecated=False
-changelog=0.2.2 - Setiap isian informasi tepi punya kotak centang; yang tidak dicentang tidak dimuat dan ruangnya dipakai bagian lain. Ikon kembali muncul di toolbar Layout Designer.
+changelog=0.2.3 - Skala bar Cm/Km dan kolom catatan proyeksi otomatis dijadikan group.
+ 0.2.2 - Setiap isian informasi tepi punya kotak centang; yang tidak dicentang tidak dimuat dan ruangnya dipakai bagian lain. Ikon kembali muncul di toolbar Layout Designer.
  0.2.1 - Kepala mengikuti ukuran acuan Kemenhut (logo, judul, U, panah, SKALA); skala bar kotak ganda dengan label Cm di atas dan Km di bawah; tanda ':' pada catatan proyeksi sejajar; kotak kepala menyesuaikan isi, sisa ruang untuk keterangan.
  0.2.0 - Berubah menjadi pembuat layout: pilih preset lalu layout lengkap dibuat dari kanvas. Mode ganti gaya layout lama dihapus.
  0.1.1 - Dialog memberi keterangan bila layout masih kosong atau proyek belum punya layout.

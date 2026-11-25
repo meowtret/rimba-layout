@@ -411,6 +411,7 @@ class _Builder:
                              if "tidak muat" not in w)
         self._stack_header()
         self._finish_situasi_head()
+        self._make_groups()
         return self.layout
 
     # --------------------------------------------------------- skala bar
@@ -526,6 +527,7 @@ class _Builder:
         bot = self.scale_bot
         bot.refreshItemSize()
         top = self._scalebar_cm(bot)
+        self.scale_top = top
         x = box_x + (box_w - bot.rect().width()) / 2.0
         # Tinggi item skala bar QGIS tidak rapat, jadi posisi batang dihitung
         # dari jarak isi, tinggi huruf angka (+-0,835 em), dan jarak label.
@@ -539,6 +541,7 @@ class _Builder:
 
     def _place_proyeksi(self, pair, box_x, box_w, y):
         k_lab, v_lab = pair
+        self.proj_pair = pair
         kw = max(text_width(self.layout, k_lab, ln)
                  for ln in k_lab.text().split("\n")) + 0.3
         vw = max(text_width(self.layout, v_lab, ln)
@@ -549,6 +552,18 @@ class _Builder:
         k_lab.attemptSetSceneRect(QRectF(x, y, kw, h))
         v_lab.attemptSetSceneRect(QRectF(x + kw + gap, y, vw, h))
         return h
+
+    def _make_groups(self):
+        """Skala bar Cm+Km dan kolom proyeksi dijadikan satu group."""
+        pairs = (("grup_skala_bar", (getattr(self, "scale_top", None),
+                                     self.scale_bot)),
+                 ("grup_proyeksi", getattr(self, "proj_pair", (None, None))))
+        for ident, items in pairs:
+            items = [i for i in items if i is not None]
+            if len(items) == 2:
+                group = self.layout.groupItems(items)
+                if group is not None:
+                    group.setId(ident)
 
     def _finish_situasi_head(self):
         lab = self.sit_head
