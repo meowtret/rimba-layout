@@ -23,6 +23,8 @@ from qgis.core import (
     QgsLayoutUtils,
     QgsPrintLayout,
     QgsRectangle,
+    QgsBasicNumericFormat,
+    QgsLineSymbol,
     QgsScaleBarSettings,
     QgsTextRenderer,
 )
@@ -86,9 +88,11 @@ def unique_name(manager, base):
     return name
 
 
-def proyeksi_text(crs):
+def proyeksi_parts(crs):
+    """Dua kolom catatan proyeksi: nama dan nilai (tanda ':' sejajar)."""
+    keys = "Sistem Proyeksi\nSistem Grid\nDatum"
     if crs is None or not crs.isValid():
-        return "Sistem Proyeksi : -\nSistem Grid : Grid Geografi"
+        return keys, ": -\n: Grid Geografi\n: -"
     desc = crs.description()
     if crs.isGeographic():
         proj = "Geografis"
@@ -100,8 +104,23 @@ def proyeksi_text(crs):
            or crs.authid() in ("EPSG:4326", "EPSG:4979")
            or crs.authid().startswith(("EPSG:326", "EPSG:327")))
     datum = "WGS 1984" if wgs else (crs.ellipsoidAcronym() or "-")
-    return ("Sistem Proyeksi : {}\nSistem Grid : Grid Geografi\n"
-            "Datum : {}".format(proj, datum))
+    return keys, ": {}\n: Grid Geografi\n: {}".format(proj, datum)
+
+
+def text_width(layout, label, line):
+    ctx = QgsLayoutUtils.createRenderContextForLayout(layout, None)
+    sf = ctx.scaleFactor() or 1.0
+    return QgsTextRenderer.textWidth(ctx, label.textFormat(), [line]) / sf
+
+
+def comma_format():
+    nf = QgsBasicNumericFormat()
+    nf.setShowThousandsSeparator(False)
+    try:
+        nf.setDecimalSeparator(",")
+    except (AttributeError, TypeError):
+        pass
+    return nf
 
 
 def wrapped_height(layout, label):
@@ -125,6 +144,19 @@ def wrapped_height(layout, label):
         total += count
     per_line = label.sizeForText().height() / max(1, len(lines))
     return per_line * total
+
+
+def _point(x, y):
+    from qgis.core import QgsLayoutPoint
+    return QgsLayoutPoint(x, y)
+
+
+def _m_unit():
+    try:
+        return Qgis.DistanceUnit.Meters
+    except AttributeError:  # QGIS < 3.30
+        from qgis.core import QgsUnitTypes
+        return QgsUnitTypes.DistanceUnit.DistanceMeters
 
 
 def _km_unit():
@@ -263,65 +295,56 @@ class _Builder:
         h_head, h_ket, h_das, h_sit, h_ttd, h_ins = heights
 
         # judul dan kepala
-        self.box(x0, head_y, w0, h_head)
+        self.head_shape = self.box(x0, head_y, w0, h_head)
         cx = x0 + 3
         cw = w0 - 6
         if o.logo and os.path.exists(o.logo):
             pic = QgsLayoutItemPicture(self.layout)
             pic.setPicturePath(o.logo)
             pic.setResizeMode(QgsLayoutItemPicture.ResizeMode.Zoom)
-            self.add(pic, self.r(x0 + w0 / 2 - 8, head_y + 3, 16, 15),
-                     "logo", "logo")
-            self.stack.append((pic, 2.0))
-        self.stack.append((self.label(o.judul, cx, head_y + 20, cw, 18,
-                                      "judul", "judul", align="center"),
-                           1.0))
+            self.add(pic, self.r(x0 + w0 / 2 - 6.25, head_y + 3, 12.5,
+                                 12.7), "logo", "logo")
+            self.stack.append(["item", pic, 3.5])
+        self.stack.append(["item", self.label(
+            o.judul, cx, head_y + 20, cw, 18, "judul", "judul",
+            align="center"), 1.0])
         if o.sk.strip():
-            self.stack.append((self.label(o.sk, cx, head_y + 38, cw, 5,
-                                          "teks", "sk", align="center"),
-                               1.0))
+            self.stack.append(["item", self.label(
+                o.sk, cx, head_y + 38, cw, 5, "teks", "sk",
+                align="center"), 1.0])
         if o.lokasi.strip():
-            self.stack.append((self.label(o.lokasi, cx, head_y + 43, cw, 9,
-                                          "subjudul", "lokasi",
-                                          align="center"), 3.0))
-        self.stack.append((self.label("U", x0 + w0 / 2 - 5, head_y + 54, 10,
-                                      5, "huruf_utara", "huruf_u",
-                                      align="center"), 0.5))
+            self.stack.append(["item", self.label(
+                o.lokasi, cx, head_y + 43, cw, 9, "subjudul", "lokasi",
+                align="center"), 1.0])
+        self.stack[-1][2] = 2.5           # jarak teks terakhir ke huruf U
+        self.stack.append(["item", self.label(
+            "U", x0 + w0 / 2 - 5, head_y + 54, 10, 5, "huruf_utara",
+            "huruf_u", align="center"), 1.5])
         arrow = QgsLayoutItemPicture(self.layout)
         arrow.setPicturePath(NORTH_ARROW)
-        self.add(arrow, self.r(x0 + w0 / 2 - 4, head_y + 59, 8, 12),
+        self.add(arrow, self.r(x0 + w0 / 2 - 3.95, head_y + 59, 7.9, 10.6),
                  "panah_utara", "panah_utara")
         arrow.setLinkedMap(main)
-        self.stack.append((arrow, 2.0))
-        self.stack.append((self.label(
+        self.stack.append(["item", arrow, 4.0])
+        self.stack.append(["item", self.label(
             "SKALA 1:[% replace(format_number(map_get("
             "item_variables('Map 1'), 'map_scale'), 0), ',', '.') %]",
             cx, head_y + 73, cw, 4, "skala_teks", "skala_teks",
-            align="center"), 1.0))
-        sb = QgsLayoutItemScaleBar(self.layout)
-        sb.setLinkedMap(main)
-        sb.applyDefaultSettings()
-        sb.setStyle("Single Box")
-        sb.setUnits(_km_unit())
-        sb.setUnitLabel("Km")
-        sb.setNumberOfSegmentsLeft(0)
-        sb.setNumberOfSegments(4)
-        sb.setSegmentSizeMode(
-            QgsScaleBarSettings.SegmentSizeMode.SegmentSizeFitWidth)
-        sb.setMinimumBarWidth(45 * self.k)
-        sb.setMaximumBarWidth(60 * self.k)
-        self.add(sb, self.r(x0 + 8, head_y + 79, 64, 10), "skala_bar",
-                 "skala_bar")
-        self.stack.append((sb, 2.0))
-        self.stack.append((self.label(proyeksi_text(main.crs()), cx + 6,
-                                      head_y + 92, cw - 6, 12,
-                                      "catatan_proyeksi", "proyeksi"), 0))
+            align="center"), 3.5])
+        self.scale_bot = self._scalebar_km(main, x0, head_y + 79)
+        self.stack.append(["scale", None, 2.3])
+        keys, vals = proyeksi_parts(main.crs())
+        k_lab = self.label(keys, cx, head_y + 92, 30, 12,
+                           "catatan_proyeksi", "proyeksi_nama")
+        v_lab = self.label(vals, cx + 31, head_y + 92, cw - 31, 12,
+                           "catatan_proyeksi", "proyeksi_nilai")
+        self.stack.append(["pair", (k_lab, v_lab), 0])
         self.head_box = (head_y, h_head)
 
         # keterangan + legenda
-        self.box(x0, ket_y, w0, h_ket)
-        self.label("KETERANGAN PETA :", cx, ket_y + 2, cw, 4,
-                   "judul_bagian", "judul_keterangan")
+        self.ket_shape = self.box(x0, ket_y, w0, h_ket)
+        self.ket_items = [self.label("KETERANGAN PETA :", cx, ket_y + 2, cw,
+                                     4, "judul_bagian", "judul_keterangan")]
         leg = QgsLayoutItemLegend(self.layout)
         leg.setTitle("")
         leg.setLinkedMap(main)
@@ -330,6 +353,7 @@ class _Builder:
         leg.setResizeToContents(True)
         self.add(leg, self.r(cx, ket_y + 7, cw, h_ket - 9), "legenda",
                  "legenda")
+        self.ket_items.append(leg)
 
         # dasar, sumber, catatan
         self.box(x0, das_y, w0, h_das)
@@ -373,27 +397,142 @@ class _Builder:
         self._finish_situasi_head()
         return self.layout
 
+    # --------------------------------------------------------- skala bar
+    def _segments(self, scale):
+        """Panjang segmen (cm kertas) dan jumlah segmen skala bar."""
+        target_cm = 5.0 * self.k
+        cm_seg = 1.0 if target_cm <= 6.0 else 2.0
+        nseg = max(2, int(round(target_cm / cm_seg)))
+        return cm_seg, nseg
+
+    def _scalebar_km(self, main, x0, y):
+        """Skala bar bawah: batang + label Km di bawah batang."""
+        scale = main.scale() or 25000.0
+        cm_seg, nseg = self._segments(scale)
+        sb = QgsLayoutItemScaleBar(self.layout)
+        sb.setLinkedMap(main)
+        sb.applyDefaultSettings()
+        sb.setStyle("Double Box")
+        sb.setUnits(_km_unit())
+        sb.setUnitLabel("Km")
+        sb.setNumberOfSegmentsLeft(0)
+        sb.setNumberOfSegments(nseg)
+        sb.setSegmentSizeMode(
+            QgsScaleBarSettings.SegmentSizeMode.SegmentSizeFixed)
+        sb.setUnitsPerSegment(cm_seg * scale / 100000.0)
+        sb.setLabelVerticalPlacement(
+            QgsScaleBarSettings.LabelVerticalPlacement.LabelBelowSegment)
+        sb.setHeight(2.0 * self.k)
+        sb.setLabelBarSpace(1.0 * self.k)
+        sb.setNumericFormat(comma_format())
+        self.add(sb, self.r(x0 + 8, y, 64, 10), "skala_bar", "skala_bar")
+        self._scale_info = (scale, cm_seg, nseg)
+        return sb
+
+    def _scalebar_cm(self, bot):
+        """Skala bar atas: hanya label cm kertas, batangnya transparan."""
+        scale, cm_seg, nseg = self._scale_info
+        top = QgsLayoutItemScaleBar(self.layout)
+        top.setLinkedMap(bot.linkedMap())
+        top.applyDefaultSettings()
+        top.setStyle(bot.style())
+        top.setUnits(_m_unit())
+        top.setMapUnitsPerScaleBarUnit(scale / 100.0)   # m per cm kertas
+        top.setUnitLabel("Cm")
+        top.setNumberOfSegmentsLeft(0)
+        top.setNumberOfSegments(nseg)
+        top.setSegmentSizeMode(
+            QgsScaleBarSettings.SegmentSizeMode.SegmentSizeFixed)
+        top.setUnitsPerSegment(cm_seg * scale / 100.0)
+        top.setLabelVerticalPlacement(
+            QgsScaleBarSettings.LabelVerticalPlacement.LabelAboveSegment)
+        top.setHeight(bot.height())
+        top.setLabelBarSpace(bot.labelBarSpace())
+        top.setBoxContentSpace(bot.boxContentSpace())
+        top.setTextFormat(bot.textFormat())
+        top.setNumericFormat(comma_format())
+        clear = {"color": "0,0,0,0", "outline_style": "no"}
+        top.setFillSymbol(QgsFillSymbol.createSimple(clear))
+        top.setAlternateFillSymbol(QgsFillSymbol.createSimple(clear))
+        top.setLineSymbol(QgsLineSymbol.createSimple({"line_style": "no"}))
+        self.layout.addLayoutItem(top)
+        top.setId("skala_bar_cm")
+        top.refreshItemSize()
+        return top
+
+    # --------------------------------------------------------- susun kepala
     def _stack_header(self):
-        """Susun kepala dari atas ke bawah sesuai tinggi teks sebenarnya."""
+        """Susun kepala dari atas ke bawah sesuai tinggi isi sebenarnya."""
         head_y, h_head = self.head_box
         k = self.k
+        box_x, box_w = 330 * k, 80 * k
         y = (head_y + 3) * k
         bottom = (head_y + h_head - 2) * k
-        for item, gap in self.stack:
-            rect = item.rect()
-            pos = item.positionWithUnits()
-            x = self.layout.convertToLayoutUnits(pos).x()
-            w = rect.width()
-            if isinstance(item, QgsLayoutItemLabel):
-                h = max(wrapped_height(self.layout, item), 2 * k)
-            else:
-                h = rect.height()
-            item.attemptSetSceneRect(QRectF(x, y, w, h))
+        for kind, item, gap in self.stack:
+            if kind == "item":
+                rect = item.rect()
+                x = self.layout.convertToLayoutUnits(
+                    item.positionWithUnits()).x()
+                if isinstance(item, QgsLayoutItemLabel):
+                    h = max(wrapped_height(self.layout, item), 2 * k)
+                else:
+                    h = rect.height()
+                item.attemptSetSceneRect(QRectF(x, y, rect.width(), h))
+            elif kind == "scale":
+                h = self._place_scale_pair(box_x, box_w, y)
+            else:                                  # pasangan proyeksi
+                h = self._place_proyeksi(item, box_x, box_w, y)
             y += h + gap * k
         if y > bottom + 0.5:
             self.warnings.append(
                 "Isi kepala (judul, lokasi, skala) lebih panjang dari "
                 "kotaknya; perpendek judul atau perbesar kotak secara manual.")
+        else:
+            self._give_space_to_legend(bottom + 2 * k - (y + 2 * k))
+
+    def _give_space_to_legend(self, spare):
+        """Kotak kepala dipas ke isinya; sisa ruang diberikan ke keterangan."""
+        if spare <= 0.5:
+            return
+        hr = self.head_shape.rect()
+        hp = self.head_shape.pos()
+        self.head_shape.attemptSetSceneRect(
+            QRectF(hp.x(), hp.y(), hr.width(), hr.height() - spare))
+        kr = self.ket_shape.rect()
+        kp = self.ket_shape.pos()
+        self.ket_shape.attemptSetSceneRect(
+            QRectF(kp.x(), kp.y() - spare, kr.width(), kr.height() + spare))
+        for item in self.ket_items:
+            p = item.pos()
+            item.attemptMove(_point(p.x(), p.y() - spare))
+
+    def _place_scale_pair(self, box_x, box_w, y):
+        bot = self.scale_bot
+        bot.refreshItemSize()
+        top = self._scalebar_cm(bot)
+        x = box_x + (box_w - bot.rect().width()) / 2.0
+        # Tinggi item skala bar QGIS tidak rapat, jadi posisi batang dihitung
+        # dari jarak isi, tinggi huruf angka (+-0,835 em), dan jarak label.
+        bcs, lbs, bar = bot.boxContentSpace(), bot.labelBarSpace(), \
+            bot.height()
+        label_h = 0.835 * bot.textFormat().size() * 0.3528
+        top.attemptMove(_point(x, y))
+        bar_top = y + bcs + label_h + lbs
+        bot.attemptMove(_point(x, bar_top - bcs))
+        return (bar_top + bar + lbs + label_h) - y
+
+    def _place_proyeksi(self, pair, box_x, box_w, y):
+        k_lab, v_lab = pair
+        kw = max(text_width(self.layout, k_lab, ln)
+                 for ln in k_lab.text().split("\n")) + 0.3
+        vw = max(text_width(self.layout, v_lab, ln)
+                 for ln in v_lab.text().split("\n")) + 0.3
+        gap = 1.0 * self.k
+        x = box_x + max(2 * self.k, (box_w - kw - gap - vw) / 2.0)
+        h = wrapped_height(self.layout, k_lab)
+        k_lab.attemptSetSceneRect(QRectF(x, y, kw, h))
+        v_lab.attemptSetSceneRect(QRectF(x + kw + gap, y, vw, h))
+        return h
 
     def _finish_situasi_head(self):
         lab = self.sit_head

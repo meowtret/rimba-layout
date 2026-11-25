@@ -124,8 +124,24 @@ for title, preset, extra in CASES:
           "peta situasi menandai cakupan Map 1")
     leg = [i for i in lay.items() if isinstance(i, QgsLayoutItemLegend)][0]
     check(leg.linkedMap() is m1, "legenda terhubung ke Map 1")
-    sb = [i for i in lay.items() if isinstance(i, QgsLayoutItemScaleBar)][0]
-    check(sb.linkedMap() is m1, "skala bar terhubung ke Map 1")
+    bars = {i.id(): i for i in lay.items()
+            if isinstance(i, QgsLayoutItemScaleBar)}
+    sb, sbc = bars.get("skala_bar"), bars.get("skala_bar_cm")
+    check(sb is not None and sbc is not None and sb.linkedMap() is m1,
+          "skala bar Km + Cm terhubung ke Map 1")
+    check(sb.unitLabel() == "Km" and sbc.unitLabel() == "Cm" and
+          abs(sb.pos().x() - sbc.pos().x()) < 1e-6 and
+          sbc.pos().y() < sb.pos().y(),
+          "label Cm di atas, Km di bawah, sejajar kiri")
+    cm_per_seg = sbc.unitsPerSegment() / sbc.mapUnitsPerScaleBarUnit()
+    km_per_seg = sb.unitsPerSegment()
+    check(abs(km_per_seg - cm_per_seg * m1.scale() / 100000) < 1e-6,
+          "1 segmen = {:g} cm = {:g} km".format(cm_per_seg, km_per_seg))
+    kn, kv = by_id(lay, "proyeksi_nama"), by_id(lay, "proyeksi_nilai")
+    check(kv.text().count("\n: ") == 2 and kv.text().startswith(": ") and
+          kv.pos().x() > kn.pos().x() + kn.rect().width() - 0.01 and
+          abs(kn.pos().y() - kv.pos().y()) < 1e-6,
+          "kolom proyeksi: tanda ':' sejajar dalam satu kolom")
     arrow = by_id(lay, "panah_utara")
     check(isinstance(arrow, QgsLayoutItemPicture) and
           arrow.linkedMap() is m1, "panah utara terhubung ke Map 1")

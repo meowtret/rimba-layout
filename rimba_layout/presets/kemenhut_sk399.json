@@ -49,7 +49,7 @@
     },
     "skala_teks": {
       "font": "Arial",
-      "size": 6.5,
+      "size": 7,
       "color": "#000000",
       "bold": true,
       "uppercase": true,
@@ -80,7 +80,7 @@
     },
     "huruf_utara": {
       "font": "Arial",
-      "size": 10,
+      "size": 10.5,
       "color": "#000000",
       "bold": true,
       "align": "center"
@@ -106,11 +106,11 @@
       }
     },
     "skala_bar": {
-      "style": "Single Box",
-      "line_width_mm": 0.25,
+      "style": "Double Box",
+      "line_width_mm": 0.2,
       "font": {
         "font": "Arial",
-        "size": 5,
+        "size": 5.5,
         "color": "#000000"
       }
     },
