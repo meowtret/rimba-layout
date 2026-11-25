@@ -3,6 +3,7 @@
 
 import os
 
+from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
 
 try:  # Qt6 / QGIS 4: QAction ada di QtGui
@@ -30,8 +31,31 @@ class RimbaLayoutPlugin:
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(MENU, self.action)
+        # ikon juga di toolbar Layout Designer
+        self.iface.layoutDesignerOpened.connect(self._add_to_designer)
+        try:                         # designer yang sudah terbuka
+            for designer in self.iface.openLayoutDesigners() or []:
+                self._add_to_designer(designer)
+        except (AttributeError, TypeError):
+            pass
+
+    def _add_to_designer(self, designer):
+        try:
+            tb = designer.actionsToolbar()
+            if tb is not None and self.action not in tb.actions():
+                tb.addAction(self.action)
+        except (AttributeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                "Gagal menambah ikon ke Layout Designer: {}".format(err),
+                "Rimba Layout", Qgis.MessageLevel.Warning)
 
     def unload(self):
+        try:
+            self.iface.layoutDesignerOpened.disconnect(self._add_to_designer)
+        except (TypeError, RuntimeError):
+            QgsMessageLog.logMessage(
+                "Sinyal Layout Designer sudah terputus.", "Rimba Layout",
+                Qgis.MessageLevel.Info)
         self.iface.removePluginMenu(MENU, self.action)
         self.iface.removeToolBarIcon(self.action)
         if self.dlg:

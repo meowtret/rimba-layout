@@ -90,11 +90,13 @@ CASES = [
           ttd="TIM PELAKSANA\nKETUA\n\n\nNAMA\nNIP. 1990")),
     ("Klasik A4", "Klasik", dict(paper="A4", panels=1)),
     ("Minimalis A1", "Minimalis", dict(paper="A1", panels=1)),
+    ("Tanpa dasar sumber instansi", "Kemenhut SK 399/2024",
+     dict(paper="A3", panels=1, dasar="", sumber="", instansi="")),
 ]
 
 for title, preset, extra in CASES:
     print("== " + title)
-    opts = builder.BuildOptions(name=title, **BASE, **extra)
+    opts = builder.BuildOptions(name=title, **dict(BASE, **extra))
     lay, warns = builder.build_layout(QgsProject.instance(), P[preset], opts)
     warns = [w for w in warns if "tidak terpasang" not in w]
     check(not warns, "tanpa peringatan {}".format(warns or ""))
@@ -162,6 +164,12 @@ for title, preset, extra in CASES:
     got = [lab.text() for lab in labels(lay) if lab.id().startswith(
         "tahun_")]
     check(sorted(got) == sorted(years), "label tahun: {}".format(got))
+    for key in ("dasar", "sumber", "instansi"):
+        want = bool(BASE.get(key)) if key not in extra else bool(extra[key])
+        check((by_id(lay, key) is not None) == want and
+              (key == "instansi" or
+               (by_id(lay, "judul_" + key) is not None) == want),
+              "{} {}".format(key, "dimuat" if want else "tidak dimuat"))
     png = os.path.join(OUT, "rimba_" + title.replace(" ", "_") + ".png")
     s = QgsLayoutExporter.ImageExportSettings()
     s.dpi = 90

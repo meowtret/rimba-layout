@@ -73,7 +73,10 @@ dlg.ed_year2.setText("TAHUN 2025 - 2026")
 dlg.ed_judul.setPlainText("PETA UJI\nRIMBA LAYOUT")
 dlg.ed_sk.setText("SK.1/UJI/2026")
 dlg.ed_instansi.setPlainText("KEMENTERIAN KEHUTANAN\n2026")
+dlg.chk["dasar"].setChecked(False)
+check(not dlg.ed_dasar.isEnabled(), "Dasar tidak dicentang: isian mati")
 dlg.chk_ttd.setChecked(True)
+check(dlg.ed_ttd.isEnabled(), "Tanda tangan dicentang: isian aktif")
 dlg.ed_ttd.setPlainText("KETUA\n\n\nNAMA")
 dlg.build()
 lay = QgsProject.instance().layoutManager().layoutByName("Uji Dialog")
@@ -82,10 +85,14 @@ check(iface.openLayoutDesigner.called, "Layout Designer dibuka")
 ids = {i.id() for i in lay.items() if hasattr(i, "id")} if lay else set()
 check({"Map 1", "Map 2", "Peta Situasi", "ttd", "tahun_1",
        "tahun_2"} <= ids, "dua panel, TTD, dua label tahun ada")
+check("dasar" not in ids and "judul_dasar" not in ids,
+      "Dasar tidak dicentang: tidak dimuat di layout")
 
 print("== Isian diingat")
 plugin.dlg = None
 plugin.run()
+check(not plugin.dlg.chk["dasar"].isChecked(),
+      "status centang diingat")
 check(plugin.dlg.ed_sk.text() == "SK.1/UJI/2026" and
       plugin.dlg.cb_panels.currentData() == 2,
       "isian terakhir muncul lagi saat dialog dibuka")

@@ -4,6 +4,7 @@
 import os
 
 from qgis.core import QgsApplication, QgsProject, QgsSettings
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -26,6 +27,25 @@ PLACEHOLDER = {
     "instansi": "KEMENTERIAN KEHUTANAN\nDIREKTORAT JENDERAL ...\nBALAI ...\n"
                 "2026",
 }
+
+
+def INFO_FIELDS(dlg):  # noqa: N802
+    """(kunci, nama di form, widget isian) informasi tepi, urut tampil."""
+    return [
+        ("judul", "Judul", dlg.ed_judul),
+        ("sk", "Nomor SK", dlg.ed_sk),
+        ("lokasi", "Lokasi / luas", dlg.ed_lokasi),
+        ("dasar", "Dasar", dlg.ed_dasar),
+        ("sumber", "Sumber peta", dlg.ed_sumber),
+        ("catatan", "Catatan", dlg.ed_catatan),
+        ("ttd", "Tanda tangan", dlg.ed_ttd),
+        ("instansi", "Instansi penerbit", dlg.ed_instansi),
+    ]
+
+
+# isian yang tercentang saat dialog pertama kali dibuka
+DEFAULT_ON = {"judul", "sk", "lokasi", "dasar", "sumber", "catatan",
+              "instansi"}
 
 
 def user_preset_dir():
@@ -107,25 +127,27 @@ class RimbaLayoutDialog(QDialog):
 
         g = QGroupBox("Isi informasi tepi")
         f = QFormLayout(g)
+        f.setLabelAlignment(Qt.AlignmentFlag.AlignLeft |
+                            Qt.AlignmentFlag.AlignTop)
+        hint = QLabel("Centang isian yang ingin dimuat di layout.")
+        hint.setStyleSheet("color:#777;")
+        f.addRow(hint)
         self.ed_judul = _text_box("judul", 4)
-        f.addRow("Judul", self.ed_judul)
         self.ed_sk = QLineEdit()
         self.ed_sk.setPlaceholderText(PLACEHOLDER["sk"])
-        f.addRow("Nomor SK", self.ed_sk)
         self.ed_lokasi = _text_box("lokasi", 2)
-        f.addRow("Lokasi / luas", self.ed_lokasi)
         self.ed_dasar = _text_box("dasar", 3)
-        f.addRow("Dasar", self.ed_dasar)
         self.ed_sumber = _text_box("sumber", 3)
-        f.addRow("Sumber peta", self.ed_sumber)
         self.ed_catatan = _text_box("catatan", 2)
-        f.addRow("Catatan", self.ed_catatan)
-        self.chk_ttd = QCheckBox("Tambahkan blok tanda tangan")
-        f.addRow("", self.chk_ttd)
         self.ed_ttd = _text_box("ttd", 4)
-        f.addRow("Tanda tangan", self.ed_ttd)
         self.ed_instansi = _text_box("instansi", 4)
-        f.addRow("Instansi penerbit", self.ed_instansi)
+        self.chk = {}
+        for key, title, field in INFO_FIELDS(self):
+            chk = QCheckBox(title)
+            chk.toggled.connect(field.setEnabled)
+            self.chk[key] = chk
+            f.addRow(chk, field)
+        self.chk_ttd = self.chk["ttd"]
         main.addWidget(g)
         main.addStretch(1)
 
@@ -144,7 +166,6 @@ class RimbaLayoutDialog(QDialog):
 
         self.cb_preset.currentIndexChanged.connect(self.update_desc)
         self.cb_panels.currentIndexChanged.connect(self.update_enabled)
-        self.chk_ttd.toggled.connect(self.update_enabled)
 
     # ------------------------------------------------------------ data
     def reload_presets(self):
@@ -180,7 +201,8 @@ class RimbaLayoutDialog(QDialog):
         two = self.cb_panels.currentData() == 2
         self.cb_theme2.setEnabled(two)
         self.ed_year2.setEnabled(two)
-        self.ed_ttd.setEnabled(self.chk_ttd.isChecked())
+        for key, _, field in INFO_FIELDS(self):
+            field.setEnabled(self.chk[key].isChecked())
 
     def current_preset(self, quiet=False):
         path = self.cb_preset.currentData()
@@ -235,7 +257,9 @@ class RimbaLayoutDialog(QDialog):
         i = self.cb_preset.findData(s.value(SKEY + "preset", "", type=str))
         if i >= 0:
             self.cb_preset.setCurrentIndex(i)
-        self.chk_ttd.setChecked(s.value(SKEY + "use_ttd", False, type=bool))
+        for key, _, _ in INFO_FIELDS(self):
+            self.chk[key].setChecked(s.value(
+                SKEY + "use_" + key, key in DEFAULT_ON, type=bool))
         self.update_enabled()
 
     def _save(self):
@@ -245,9 +269,17 @@ class RimbaLayoutDialog(QDialog):
         s.setValue(SKEY + "paper", self.cb_paper.currentData())
         s.setValue(SKEY + "panels", self.cb_panels.currentData())
         s.setValue(SKEY + "preset", self.cb_preset.currentData())
-        s.setValue(SKEY + "use_ttd", self.chk_ttd.isChecked())
+        for key, _, _ in INFO_FIELDS(self):
+            s.setValue(SKEY + "use_" + key, self.chk[key].isChecked())
 
     # ------------------------------------------------------------ buat
+    def _val(self, key):
+        """Isi field bila dicentang; kosong berarti tidak dimuat."""
+        if not self.chk[key].isChecked():
+            return ""
+        field = dict((k, w) for k, _, w in INFO_FIELDS(self))[key]
+        return self._get(field).strip()
+
     def build(self):
         pre = self.current_preset()
         if pre is None:
@@ -270,16 +302,15 @@ class RimbaLayoutDialog(QDialog):
             themes=[None if t == CANVAS else t for t in themes],
             years=[self.ed_year1.text().strip(),
                    self.ed_year2.text().strip() if panels == 2 else ""],
-            judul=self.ed_judul.toPlainText().strip() or "JUDUL PETA",
-            sk=self.ed_sk.text().strip(),
-            lokasi=self.ed_lokasi.toPlainText().strip(),
-            dasar=self.ed_dasar.toPlainText().strip(),
-            sumber=self.ed_sumber.toPlainText().strip(),
-            catatan=self.ed_catatan.toPlainText().strip(),
-            ttd=(self.ed_ttd.toPlainText().strip()
-                 if self.chk_ttd.isChecked() else ""),
+            judul=self._val("judul"),
+            sk=self._val("sk"),
+            lokasi=self._val("lokasi"),
+            dasar=self._val("dasar"),
+            sumber=self._val("sumber"),
+            catatan=self._val("catatan"),
+            ttd=self._val("ttd"),
             logo=self.ed_logo.text().strip(),
-            instansi=self.ed_instansi.toPlainText().strip(),
+            instansi=self._val("instansi"),
             layers=layers,
             extent=canvas.extent(),
             crs=canvas.mapSettings().destinationCrs(),

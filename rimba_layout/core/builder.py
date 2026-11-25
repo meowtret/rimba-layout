@@ -52,7 +52,7 @@ class BuildOptions:
         self.panels = kw.get("panels", 1)
         self.themes = kw.get("themes", [None, None])     # nama tema peta
         self.years = kw.get("years", ["", ""])           # label tahun panel
-        self.judul = kw.get("judul", "JUDUL PETA")
+        self.judul = kw.get("judul", "")
         self.sk = kw.get("sk", "")
         self.lokasi = kw.get("lokasi", "")
         self.dasar = kw.get("dasar", "")
@@ -285,8 +285,24 @@ class _Builder:
         # ---- panel informasi tepi (x 330..410)
         x0, w0 = 330, 80
         ttd = bool(o.ttd.strip())
+        notes = [(head, body.strip(), role, ident) for head, body, role, ident
+                 in (("DASAR :", o.dasar, "sumber_data", "dasar"),
+                     ("SUMBER PETA :", o.sumber, "sumber_data", "sumber"),
+                     ("CATATAN :", o.catatan, "catatan", "catatan"))
+                 if body.strip()]
         heights = ([106, 50, 38, 28, 30, 15] if ttd
                    else [108, 65, 45, 36, 0, 15])
+        # bagian yang tidak dicentang tidak dibuat; ruangnya dipindah
+        if not notes:                      # dasar/sumber/catatan kosong
+            heights[1] += heights[2] + 2
+            heights[2] = 0
+        else:                              # tinggi menurut jumlah bagian
+            want = 2 + 14 * len(notes) if len(notes) < 3 else heights[2]
+            heights[1] += heights[2] - want
+            heights[2] = want
+        if not o.instansi.strip():
+            heights[3] += heights[5] + 2
+            heights[5] = 0
         ys, y = [], 10.0
         for hgt in heights:
             ys.append(y)
@@ -305,9 +321,10 @@ class _Builder:
             self.add(pic, self.r(x0 + w0 / 2 - 6.25, head_y + 3, 12.5,
                                  12.7), "logo", "logo")
             self.stack.append(["item", pic, 3.5])
-        self.stack.append(["item", self.label(
-            o.judul, cx, head_y + 20, cw, 18, "judul", "judul",
-            align="center"), 1.0])
+        if o.judul.strip():
+            self.stack.append(["item", self.label(
+                o.judul, cx, head_y + 20, cw, 18, "judul", "judul",
+                align="center"), 1.0])
         if o.sk.strip():
             self.stack.append(["item", self.label(
                 o.sk, cx, head_y + 38, cw, 5, "teks", "sk",
@@ -316,7 +333,8 @@ class _Builder:
             self.stack.append(["item", self.label(
                 o.lokasi, cx, head_y + 43, cw, 9, "subjudul", "lokasi",
                 align="center"), 1.0])
-        self.stack[-1][2] = 2.5           # jarak teks terakhir ke huruf U
+        if self.stack:
+            self.stack[-1][2] = 2.5       # jarak teks terakhir ke huruf U
         self.stack.append(["item", self.label(
             "U", x0 + w0 / 2 - 5, head_y + 54, 10, 5, "huruf_utara",
             "huruf_u", align="center"), 1.5])
@@ -355,18 +373,15 @@ class _Builder:
                  "legenda")
         self.ket_items.append(leg)
 
-        # dasar, sumber, catatan
-        self.box(x0, das_y, w0, h_das)
-        part = h_das / 3.0
-        for i, (head, body, role) in enumerate((
-                ("DASAR :", o.dasar, "sumber_data"),
-                ("SUMBER PETA :", o.sumber, "sumber_data"),
-                ("CATATAN :", o.catatan, "catatan"))):
-            yy = das_y + 2 + i * part
-            ident = ("dasar", "sumber", "catatan")[i]
-            self.label(head, cx, yy, cw, 4, "judul_bagian",
-                       "judul_" + ident)
-            self.label(body, cx, yy + 4, cw, part - 5, role, ident)
+        # dasar, sumber, catatan (hanya yang diisi)
+        if notes:
+            self.box(x0, das_y, w0, h_das)
+            part = (h_das - 2) / float(len(notes))
+            for i, (head, body, role, ident) in enumerate(notes):
+                yy = das_y + 2 + i * part
+                self.label(head, cx, yy, cw, 4, "judul_bagian",
+                           "judul_" + ident)
+                self.label(body, cx, yy + 4, cw, part - 5, role, ident)
 
         # peta situasi
         self.box(x0, sit_y, w0, h_sit)
@@ -383,10 +398,11 @@ class _Builder:
                        "ttd", align="center")
 
         # instansi penerbit
-        self.box(x0, ins_y, w0, h_ins)
-        self.label(o.instansi, cx, ins_y + 1.5, cw, h_ins - 3,
-                   "instansi_penerbit", "instansi", align="center",
-                   valign="center")
+        if o.instansi.strip():
+            self.box(x0, ins_y, w0, h_ins)
+            self.label(o.instansi, cx, ins_y + 1.5, cw, h_ins - 3,
+                       "instansi_penerbit", "instansi", align="center",
+                       valign="center")
 
         # gaya dari preset (grid, huruf, bingkai)
         _, warns = apply.apply_preset(self.layout, self.preset, self.roles,
